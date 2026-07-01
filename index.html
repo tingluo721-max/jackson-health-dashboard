@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jackson · 健康档案</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#f0f2f6;color:#262730;padding:20px}
+.header{text-align:center;padding:30px 20px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:16px;margin-bottom:20px}
+.header h1{font-size:28px;margin-bottom:6px}
+.header p{opacity:.8;font-size:14px}
+.kpi{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.kpi-card{background:#fff;padding:18px 14px;border-radius:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.kpi-card .num{font-size:26px;font-weight:700;color:#667eea}
+.kpi-card .lbl{font-size:12px;color:#888;margin-top:4px}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab-btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;background:#e2e8f0;color:#555;transition:.2s}
+.tab-btn.active{background:#667eea;color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h2{font-size:18px;margin-bottom:14px;color:#333}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#667eea;color:#fff;padding:10px 8px;text-align:center;font-weight:600}
+td{padding:8px;text-align:center;border-bottom:1px solid #f0f0f0}
+tr:hover{background:#f8f9ff}
+.cause-group{padding:10px 14px;margin:6px 0;background:#f7f8fc;border-radius:8px;border-left:4px solid #667eea;font-size:14px}
+.expander{background:#f8f9ff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:8px 0;cursor:pointer;transition:.2s}
+.expander:hover{background:#eff1ff}
+.expander .title{font-size:15px;font-weight:600;color:#333}
+.expander .meta{font-size:12px;color:#888;margin-top:4px}
+.expander .detail{display:none;margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0}
+.expander.open .detail{display:block}
+.detail-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:8px}
+.detail-row .col{flex:1}
+.detail-row .col-label{font-size:11px;color:#888;text-transform:uppercase}
+.detail-row .col-val{font-size:13px;color:#333}
+.tip{background:#fff3cd;padding:10px 14px;border-radius:8px;font-size:13px;color:#856404;margin-top:8px}
+.ins-note{background:#fff3cd;padding:4px 8px;border-radius:4px;font-size:12px}
+.info-box{background:#e8f4fd;padding:14px 18px;border-radius:10px;font-size:14px;color:#1a5f7a;line-height:1.6}
+.footer{text-align:center;color:#aaa;font-size:12px;padding:20px}
+@media(max-width:768px){.kpi{grid-template-columns:repeat(3,1fr)}}
+
+.ins-table th { font-size: 11px; padding: 8px 6px; vertical-align: top; }
+.ins-table td { font-size: 12px; }
+
+</style>
+<div class="header">
+  <h1>🏥 Jackson · 健康档案</h1>
+  <p>病程追踪 · 治疗知识 · 保险报销</p>
+</div>
+
+<!-- KPI -->
+<div class="kpi" id="kpi"></div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('timeline')">📅 病程时间线</button>
+  <button class="tab-btn" onclick="switchTab('knowledge')">🧠 治疗知识库</button>
+  <button class="tab-btn" onclick="switchTab('insurance')">📋 保险报销</button>
+</div>
+
+<!-- Tab 1: Timeline -->
+<div class="tab-content active" id="tab-timeline">
+  <div class="card">
+    <h2>就诊时间线</h2>
+    <div id="timeline-table"></div>
+  </div>
+  <div class="card">
+    <h2>病程分组</h2>
+    <div id="cause-groups"></div>
+  </div>
+</div>
+
+<!-- Tab 2: Knowledge -->
+<div class="tab-content" id="tab-knowledge">
+  <div id="knowledge-cards"></div>
+</div>
+
+<!-- Tab 3: Insurance -->
+<div class="tab-content" id="tab-insurance">
+  <div class="card">
+    <h2>商业保险报销清单</h2>
+    <div id="insurance-table"></div>
+  </div>
+  <div class="info-box" id="ins-summary"></div>
+</div>
+
+<div class="footer">医疗发票管家 · 自动生成</div>
+
+
+
+
+<script>
+// ---- DATA ----
+const records = [
+  {date:"2026-07-01",hospital:"儿童医院",cause:"清嗓子（耳鼻喉+中医科）",type:"复诊",cost:367.69,zf1:279.69,zf2:88.00,zf:0.00,treatment:"门诊",rx:"中药+西药",wilo:139.84,mt:139.84,pingan:0.00,actual:88.01},
+  {date:"2026-06-27",hospital:"儿童医院",cause:"清嗓子",type:"初诊",cost:512.27,zf1:182.27,zf2:50.50,zf:279.50,treatment:"雾化吸入",rx:"布地奈德+沙丁胺醇+草杏止咳+喉咽清",wilo:91.14,mt:91.14,pingan:0.00,actual:329.99},
+  {date:"2026-06-15",hospital:"儿童医院",cause:"腮腺炎",type:"复诊输液",cost:91.35,zf1:68.76,zf2:22.59,zf:0.00,treatment:"静脉输液",rx:"头孢美唑钠+过滤输液器",wilo:34.38,mt:34.38,pingan:0.00,actual:22.59},
+  {date:"2026-06-14",hospital:"美团",cause:"腮腺炎",type:"线上购药",cost:128.50,zf1:0.00,zf2:0.00,zf:128.50,treatment:"线上购药",rx:"自购药物",wilo:0.00,mt:0.00,pingan:0.00,actual:128.50},
+  {date:"2026-06-14",hospital:"儿童医院",cause:"腮腺炎",type:"复诊输液",cost:34.88,zf1:20.97,zf2:13.91,zf:0.00,treatment:"静脉输液",rx:"头孢美唑钠+布洛芬",wilo:10.48,mt:10.48,pingan:0.00,actual:13.92},
+  {date:"2026-06-12",hospital:"儿童医院",cause:"腮腺炎",type:"复诊",cost:370.79,zf1:301.81,zf2:68.98,zf:0.00,treatment:"彩超+化验",rx:"头孢卡品酯(6盒)",wilo:150.91,mt:150.91,pingan:0.00,actual:68.97},
+  {date:"2026-06-03",hospital:"海淀妇幼",cause:"腮腺炎",type:"初诊",cost:335.93,zf1:193.04,zf2:54.05,zf:88.84,treatment:"彩超+采血",rx:"头孢卡品酯+蒲地蓝",wilo:96.52,mt:96.52,pingan:335.93,actual:-193.04},
+  {date:"2026-05-07",hospital:"美团买药",cause:"鼻炎/鼻窦炎",type:"线上购药",cost:31.70,zf1:0.00,zf2:0.00,zf:31.70,treatment:"线上购药",rx:"桉柠蒎肠溶胶囊(切诺)",wilo:0.00,mt:0.00,pingan:29.80,actual:1.90},
+  {date:"2026-05-02",hospital:"西苑医院",cause:"鼻炎复发",type:"初诊",cost:189.50,zf1:100.64,zf2:10.86,zf:78.00,treatment:"门诊",rx:"清热通窍口服液+小儿消积止咳+康复新液",wilo:50.32,mt:0.00,pingan:189.50,actual:-50.32},
+  {date:"2026-05-01",hospital:"马连洼社区医院",cause:"嘴巴摔破",type:"急诊",cost:76.20,zf1:75.20,zf2:1.00,zf:0.00,treatment:"外伤处理",rx:"清创缝合",wilo:37.60,mt:0.00,pingan:76.20,actual:-37.60},
+  {date:"2026-04-13",hospital:"京都儿童医院",cause:"腿疼",type:"初诊",cost:0.00,zf1:0.00,zf2:0.00,zf:0.00,treatment:"检查",rx:"医生说没事，号退了",wilo:0.00,mt:0.00,pingan:0.00,actual:0.00},
+  {date:"2026-03-24",hospital:"北医三院北部院区",cause:"结膜炎",type:"初诊",cost:115.80,zf1:105.80,zf2:10.00,zf:0.00,treatment:"门诊",rx:"眼药水",wilo:52.90,mt:0.00,pingan:0.00,actual:62.90},
+  {date:"2026-03-10",hospital:"马连洼社区医院",cause:"扁桃体化脓",type:"复查",cost:51.00,zf1:50.00,zf2:1.00,zf:0.00,treatment:"门诊复查",rx:"常规复查",wilo:25.00,mt:0.00,pingan:0.00,actual:26.00},
+  {date:"2026-03-09",hospital:"儿童医院",cause:"扁桃体化脓",type:"复诊输液",cost:444.09,zf1:201.50,zf2:45.85,zf:196.74,treatment:"静脉输液",rx:"厄他培南钠+布洛芬+细菌溶解产物+开喉剑",wilo:100.75,mt:0.00,pingan:0.00,actual:343.34},
+  {date:"2026-03-08",hospital:"儿童医院",cause:"扁桃体化脓",type:"复诊输液",cost:407.20,zf1:335.36,zf2:71.84,zf:0.00,treatment:"静脉输液",rx:"厄他培南钠+小儿豉翘清热颗粒",wilo:167.68,mt:0.00,pingan:0.00,actual:239.52},
+  {date:"2026-03-07",hospital:"儿童医院",cause:"扁桃体化脓",type:"初诊",cost:377.28,zf1:312.36,zf2:64.92,zf:0.00,treatment:"静脉输液",rx:"厄他培南钠+法罗培南钠颗粒",wilo:156.18,mt:0.00,pingan:0.00,actual:221.10}
+];
+
+const knowledge = {
+  "嘴巴摔破":{cost:"¥76.20",visits:"1次",pattern:"清创缝合",tip:"儿童外伤及时处理",summary:""},
+  "扁桃体化脓":{cost:"¥1,279.57",visits:"4次",pattern:"静脉厄他培南钠 3天 + 中成药 → 第4天复查",tip:"尽早抗生素，避免拖到输液；儿童医院耳鼻喉科",summary:""},
+  "清嗓子":{cost:"¥512.27",visits:"1次",pattern:"布地奈德+沙丁胺醇雾化 + 中成药止咳",tip:"家中备雾化机+布地奈德/沙丁胺醇；避免冷空气",summary:""},
+  "清嗓子（耳鼻喉+中医科）":{cost:"¥367.69",visits:"1次",pattern:"中药+西药联合治疗",tip:"耳鼻喉科+中医科联合就诊",summary:""},
+  "结膜炎":{cost:"¥115.80",visits:"1次",pattern:"门诊+眼药水",tip:"注意眼部卫生",summary:""},
+  "腮腺炎":{cost:"¥961.45",visits:"5次",pattern:"口服头孢卡品酯 → 复发 → 静脉头孢美唑钠 2天",tip:"腮帮肿痛第一时间就医；家中备蒲地蓝+头孢口服",summary:""},
+  "腿疼":{cost:"¥0.00",visits:"1次",pattern:"门诊检查",tip:"排查生长发育问题",summary:""},
+  "鼻炎/鼻窦炎":{cost:"¥31.70",visits:"1次",pattern:"中成药口服 + 粘液溶解剂",tip:"鼻炎季前备切诺+通窍口服液",summary:""},
+  "鼻炎复发":{cost:"¥189.50",visits:"1次",pattern:"中成药口服 + 粘液溶解剂 → 复诊",tip:"鼻炎季前备切诺+通窍口服液；西苑医院/儿童医院",summary:""}
+};
+
+// Totals
+const totalCost = records.reduce((s,r)=>s+r.cost,0);
+const totalWilo = records.reduce((s,r)=>s+r.wilo,0);
+const totalMT = records.reduce((s,r)=>s+r.mt,0);
+const totalPingan = records.reduce((s,r)=>s+r.pingan,0);
+const totalActual = records.reduce((s,r)=>s+r.actual,0);
+const causes = [...new Set(records.map(r=>r.cause))];
+const hospitals = [...new Set(records.map(r=>r.hospital))];
+const dates = records.map(r=>new Date(r.date));
+const minDate = new Date(Math.min(...dates));
+const maxDate = new Date(Math.max(...dates));
+
+// KPI
+document.getElementById('kpi').innerHTML = `
+<div class="kpi-card"><div class="num">¥${totalCost.toLocaleString('zh',{minimumFractionDigits:2})}</div><div class="lbl">💰 总花销</div></div>
+<div class="kpi-card"><div class="num">${records.length}</div><div class="lbl">🏥 就诊次数</div></div>
+<div class="kpi-card"><div class="num">${causes.length}</div><div class="lbl">🦠 病因数</div></div>
+<div class="kpi-card"><div class="num">${hospitals.length}</div><div class="lbl">📍 医院数</div></div>
+<div class="kpi-card"><div class="num">${minDate.toISOString().slice(5,10)}~${maxDate.toISOString().slice(5,10)}</div><div class="lbl">📅 跨度</div></div>
+`;
+
+// Timeline table (desc)
+const sorted = [...records].sort((a,b)=>a.date>b.date?-1:1);
+let thtml = '<table><thead><tr><th>日期</th><th>医院</th><th>病因</th><th>类型</th><th>治疗方式</th><th>处方</th><th>花销</th></tr></thead><tbody>';
+sorted.forEach(r=>{
+  thtml += `<tr><td>${r.date.slice(5)}</td><td>${r.hospital}</td><td><b>${r.cause}</b></td><td>${r.type}</td><td>${r.treatment}</td><td style="text-align:left;font-size:12px">${r.rx}</td><td style="text-align:right">¥${r.cost.toFixed(2)}</td></tr>`;
+});
+thtml += '</tbody></table>';
+document.getElementById('timeline-table').innerHTML = thtml;
+
+// Cause groups
+let chtml = '';
+const causeMap = {};
+records.forEach(r=>{
+  if(!causeMap[r.cause]) causeMap[r.cause]=[];
+  causeMap[r.cause].push(r);
+});
+for(const [cause, items] of Object.entries(causeMap)){
+  const s = items.sort((a,b)=>a.date>b.date?1:-1);
+  chtml += `<div class="cause-group"><b>${cause}</b> &nbsp; ${s[0].date.slice(5)}~${s[s.length-1].date.slice(5)} &nbsp;·&nbsp; ${items.length}次 &nbsp;·&nbsp; ¥${items.reduce((a,i)=>a+i.cost,0).toLocaleString('zh',{minimumFractionDigits:2})}</div>`;
+}
+document.getElementById('cause-groups').innerHTML = chtml;
+
+// Knowledge
+let khtml = '';
+for(const [cause, kb] of Object.entries(knowledge)){
+  khtml += `<div class="expander" onclick="this.classList.toggle('open')">
+    <div class="title">🦠 ${cause}</div>
+    <div class="meta">${kb.cost} &nbsp;|&nbsp; ${kb.visits}</div>
+    <div class="detail"><div class="tip">💡 ${kb.tip}</div></div></div>`;
+}
+document.getElementById('knowledge-cards').innerHTML = khtml;
+
+// Insurance table
+let ihtml = `<table><thead><tr>
+  <th>日期</th><th>医院</th><th>病因</th>
+  <th>总花销</th><th>自付一<br>甲类</th><th>自付二<br>乙类</th><th>自费<br>丙类</th>
+  <th>Wilo报销<br>50%</th><th>MT报销<br>50%(6.1起)</th><th>平安报销<br>4.27起</th><th>实付</th>
+</tr></thead><tbody>`;
+sorted.forEach(r=>{
+  ihtml += `<tr>
+    <td>${r.date.slice(5)}</td><td>${r.hospital}</td><td style="font-size:12px">${r.cause}</td>
+    <td style="text-align:right">¥${r.cost.toFixed(2)}</td>
+    <td style="text-align:right">¥${r.zf1.toFixed(2)}</td>
+    <td style="text-align:right">¥${r.zf2.toFixed(2)}</td>
+    <td style="text-align:right">¥${r.zf.toFixed(2)}</td>
+    <td style="text-align:right">¥${r.wilo.toFixed(2)}</td>
+    <td style="text-align:right">¥${r.mt.toFixed(2)}</td>
+    <td style="text-align:right">¥${r.pingan.toFixed(2)}</td>
+    <td style="text-align:right;font-weight:bold">¥${r.actual.toFixed(2)}</td></tr>`;
+});
+ihtml += `<tr style="border-top:2px solid #333;font-weight:bold;background:#f0f4ff">
+  <td colspan="3">合 计</td>
+  <td style="text-align:right">¥${totalCost.toLocaleString('zh',{minimumFractionDigits:2})}</td>
+  <td style="text-align:right">¥${records.reduce((s,r)=>s+r.zf1,0).toFixed(2)}</td>
+  <td style="text-align:right">¥${records.reduce((s,r)=>s+r.zf2,0).toFixed(2)}</td>
+  <td style="text-align:right">¥${records.reduce((s,r)=>s+r.zf,0).toFixed(2)}</td>
+  <td style="text-align:right">¥${totalWilo.toFixed(2)}</td>
+  <td style="text-align:right">¥${totalMT.toFixed(2)}</td>
+  <td style="text-align:right">¥${totalPingan.toFixed(2)}</td>
+  <td style="text-align:right">¥${totalActual.toFixed(2)}</td></tr></tbody></table>`;
+document.getElementById('insurance-table').innerHTML = ihtml;
+
+document.getElementById('ins-summary').innerHTML = `
+📋 <b>报销汇总</b><br>
+💰 总花销 ¥${totalCost.toLocaleString('zh',{minimumFractionDigits:2})}<br>
+🏢 Wilo团险 ¥${totalWilo.toLocaleString('zh',{minimumFractionDigits:2})} (自付一×50%) &nbsp;|&nbsp;
+🏢 MT团险 ¥${totalMT.toLocaleString('zh',{minimumFractionDigits:2})} (自付一×50%, 6.1起)<br>
+🏥 平安保险 ¥${totalPingan.toLocaleString('zh',{minimumFractionDigits:2})} (4.27起)<br>
+💵 <b>实付 ¥${totalActual.toLocaleString('zh',{minimumFractionDigits:2})}</b>
+`;
+
+// Tab switch
+const TABS = ['timeline','knowledge','insurance'];
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.querySelectorAll('.tab-btn')[TABS.indexOf(tab)].classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+</script>
+
+</body>
+</html>
